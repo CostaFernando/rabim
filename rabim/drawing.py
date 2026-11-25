@@ -38,6 +38,45 @@ def _font(face, size):
     return ImageFont.truetype(face, size)
 
 
+# Advance and pen paths in ems, centered on the font's middle anchor.
+_MATH_STROKES = {
+    "→": (.82, (((.05, .01), (.70, 0)), ((.48, -.17), (.71, 0), (.49, .16)))),
+    "Σ": (.62, (((.55, -.31), (.10, -.32), (.35, -.02), (.06, .30), (.53, .29)),)),
+    "⁻": (.28, (((.02, -.26), (.23, -.27)),)),
+}
+
+
+@lru_cache(maxsize=128)
+def _missing_symbols(font):
+    # Pillow renders unsupported code points with the font's missing-glyph mask.
+    def signature(char):
+        mask = font.getmask(char)
+        return mask.size, bytes(mask)
+
+    missing = signature(chr(0x10FFFF))
+    return frozenset(char for char in _MATH_STROKES if signature(char) == missing)
+
+
+@lru_cache(maxsize=512)
+def _pen_runs(font, words):
+    """Keep native text together so kerning and shaping survive the fallback."""
+    missing = _missing_symbols(font)
+    runs = []
+    start = 0
+    for index, char in enumerate(words):
+        if char in missing:
+            if start < index:
+                text = words[start:index]
+                runs.append((text, font.getlength(text), ()))
+            advance, paths = _MATH_STROKES[char]
+            runs.append((char, advance * font.size, paths))
+            start = index + 1
+    if start < len(words):
+        text = words[start:]
+        runs.append((text, font.getlength(text), ()))
+    return tuple(runs)
+
+
 @lru_cache(maxsize=64)
 def _handwriting(font, words, anchor):
     """Order connected ink regions left to right and follow each one's bends."""
@@ -90,14 +129,43 @@ class Canvas:
             anchor=anchor,
         )
 
+    def text_width(self, words, *, size=26, face="sans"):
+        """Advance in canvas coordinates, including any hand-drawn math symbols."""
+        font = _font(getattr(self.theme, face), max(1, round(size * self.scale)))
+        return sum(width for _, width, _ in _pen_runs(font, words)) / self.scale
+
     def write_text(self, xy, words, *, progress=1, size=26, face="sans", color=None, anchor="lm"):
         """Trace the ink of a single line using the selected theme font."""
         if progress <= 0 or not words:
             return
+        font = _font(getattr(self.theme, face), max(1, round(size * self.scale)))
+        if any(char in words for char in _MATH_STROKES) and not _missing_symbols(font).isdisjoint(words):
+            runs = _pen_runs(font, words)
+            width = self.text_width(words, size=size, face=face)
+            x, y = xy
+            x -= {"l": 0, "m": width / 2, "r": width}[anchor[0]]
+            if anchor[1] != "m":
+                middle = font.getbbox(words, anchor="lm")[1]
+                y += (font.getbbox(words, anchor="l" + anchor[1])[1] - middle) / self.scale
+            remaining = progress * width
+            for text, pixels, paths in runs:
+                advance = pixels / self.scale
+                fraction = min(1, remaining / advance) if advance else 1
+                if paths:
+                    for index, path in enumerate(paths):
+                        points = [(x + dx * size, y + dy * size) for dx, dy in path]
+                        self.path(points, color=color, width=max(2, size * .065),
+                                  progress=max(0, min(1, fraction * len(paths) - index)))
+                else:
+                    self.write_text((x, y), text, progress=fraction, size=size, face=face, color=color)
+                x += advance
+                remaining -= advance
+                if remaining <= 0:
+                    break
+            return
         if progress >= 1:
             self.text(xy, words, size=size, face=face, color=color, anchor=anchor)
             return
-        font = _font(getattr(self.theme, face), round(size * self.scale))
         left, top, alpha, order = _handwriting(font, words, anchor)
         if not order:
             return
