@@ -45,9 +45,17 @@ class Page:
         draw(Canvas(image, self.theme, 17))
         box = image.getbbox()
         if box:
-            self.layers.append((at, duration, box[:2], image.crop(box)))
+            self.layers.append((at, duration, box[:2], image.crop(box), None))
 
-    def label(self, at, xy, words, size, color="ink", *, mono=False, duration=0.8):
+    def label(self, at, xy, words, size, color="ink", *, mono=False, duration=0.8, reveal="wipe"):
+        if reveal == "handwrite":
+            def write(canvas, progress):
+                canvas.write_text(xy, words, size=size, face="mono" if mono else "sans",
+                                  color=getattr(self.theme, color), anchor="la", progress=progress)
+            self.layers.append((at, duration, None, None, write))
+            return
+        if reveal != "wipe":
+            raise ValueError(f"Unknown label reveal: {reveal!r}")
         self.layer(at, duration, lambda c: c.text(
             xy, words, size=size, face="mono" if mono else "sans",
             color=getattr(self.theme, color), anchor="la",
@@ -60,10 +68,13 @@ class Page:
         self.layer(at, 1, draw)
 
     def paint(self, image, time):
-        for at, duration, xy, layer in self.layers:
+        for at, duration, xy, layer, write in self.layers:
             if time < at:
                 continue
             fraction = min(1, (time - at) / duration) if duration else 1
+            if write is not None:
+                write(Canvas(image, self.theme, 17), fraction)
+                continue
             width = round(layer.width * fraction)
             if width:
                 visible = layer if width == layer.width else layer.crop((0, 0, width, layer.height))

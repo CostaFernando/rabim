@@ -13,7 +13,7 @@ from rabim.notebook import Notebook
 
 scene = Notebook(duration=4)
 page = scene.page(0, "How far is a kilometer?")
-page.label(1, (100, 310), "1 kilometer = 1,000 meters", 52, mono=True)
+page.label(1, (100, 310), "1 kilometer = 1,000 meters", 52, reveal="handwrite", duration=1.4)
 ```
 
 ```sh
@@ -64,6 +64,8 @@ Use `--voice Daniel` to select a macOS speech voice. Each `cue(words)` appends a
 Canvas coordinates use a 1280 × 720 page with the origin at the top left. The title and subtitle occupy the top 190 units. Draw layers in reading order.
 
 - `text((x,y), words, size=26, face="sans", color=...)` anchors at left center by default. Faces include sans, serif and mono.
+- `write_text((x,y), words, progress=p, size=26)` traces a line of text with the same font, color, and anchor options as `text`. On a notebook page, choose `page.label(..., reveal="handwrite", duration=1.4)`. The default label reveal is a horizontal wipe.
+- `brush_fill(points, progress=p, color=...)` paints inside a polygon with alternating diagonal brushstrokes. For an outline, trace its closed perimeter with `path`.
 - `path(points, progress=p, width=3, color=...)` reveals a fraction of the stroke length.
 - `arrow(start, end, progress=p)`, `highlight(start, end, progress=p)` and `dot(xy, radius=8)` share the scene palette.
 
