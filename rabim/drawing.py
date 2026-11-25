@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from functools import lru_cache
 from itertools import pairwise
+from pathlib import Path
 from math import atan2, ceil, cos, dist, pi, sin
 
 from PIL import ImageDraw, ImageFont
@@ -24,6 +25,12 @@ class Theme:
     sans: str = "/System/Library/Fonts/Avenir Next.ttc"
     mono: str = "/System/Library/Fonts/Supplemental/Andale Mono.ttf"
 
+
+    @classmethod
+    def notebook(cls, **overrides):
+        """Create a notebook theme using the bundled handwriting face."""
+        overrides.setdefault("sans", str(Path(__file__).parent / "fonts/caveat/Caveat-SemiBold.ttf"))
+        return cls(**overrides)
 
 @lru_cache(maxsize=128)
 def _font(face, size):

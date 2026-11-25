@@ -4,7 +4,7 @@ Rabim is a Python library for composing hand-drawn videos from reusable drawing 
 
 ## Preview and render
 
-Use Python 3.10+, Pillow, and FFmpeg. The built-in fonts and optional speech synthesis currently target macOS. Install from a local checkout with `python -m pip install -e /path/to/rabim`.
+Use Python 3.10+, Pillow, and FFmpeg. Notebook handwriting uses the bundled Caveat SemiBold font. The other default font paths and optional speech synthesis currently target macOS. Install from a local checkout with `python -m pip install -e /path/to/rabim`.
 
 From your video project, save the following as `example.py`:
 
@@ -31,7 +31,7 @@ Use `Notebook.page` for a fresh board, `page.label` for handwriting or monospace
 python -m rabim example.py --audio path/to/finished-soundtrack.m4a
 ```
 
-A notebook renders silently by default. Supply a local audio file or a video containing the finished mix to use its audio stream. Pass a custom Theme to select your own palette and fonts.
+A notebook renders silently by default. Supply a local audio file or a video containing the finished mix to use its audio stream. Use `Theme.notebook(accent="#913c25")` to customize the palette while keeping the notebook handwriting. Override `sans` or `mono` to choose another font.
 
 ## Choose a component
 

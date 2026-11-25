@@ -1,5 +1,4 @@
 """Timed notebook pages assembled from editable, cached drawing layers."""
-from dataclasses import replace
 
 from PIL import Image
 
@@ -8,9 +7,7 @@ from .drawing import Canvas, Theme
 
 class Notebook:
     def __init__(self, *, duration, masthead="", edition="", theme=None):
-        self.theme = theme or replace(
-            Theme(), sans="/System/Library/Fonts/Supplemental/Bradley Hand Bold.ttf"
-        )
+        self.theme = theme or Theme.notebook()
         self.duration = duration
         self.masthead = masthead
         self.edition = edition

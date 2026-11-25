@@ -11,3 +11,6 @@ dependencies = ["Pillow>=10"]
 
 [tool.setuptools]
 packages = ["rabim"]
+
+[tool.setuptools.package-data]
+rabim = ["fonts/caveat/*.ttf", "fonts/caveat/OFL.txt"]
