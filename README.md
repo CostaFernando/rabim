@@ -17,11 +17,17 @@ page.label(1, (100, 310), "1 kilometer = 1,000 meters", 52, reveal="handwrite", 
 ```
 
 ```sh
-python -m rabim example.py --preview
-python -m rabim example.py -o renders/distance.mp4
+python -m rabim example.py --quality draft
+python -m rabim example.py --quality production -o renders/distance.mp4
 ```
 
-Full renders use 1280 × 720 at 24 fps. Preview uses 640 × 360 at 12 fps.
+| Render profile | Output | H.264 encoding | Default file |
+| --- | --- | --- | --- |
+| `draft` (also `--preview`) | 640 × 360, 12 fps | veryfast, CRF 23 | `renders/example-preview.mp4` |
+| `standard` (default) | 1280 × 720, 24 fps | fast, CRF 17 | `renders/example.mp4` |
+| `production` | 1920 × 1080, 24 fps | fast, CRF 15 | `renders/example-1080p.mp4` |
+
+Switch profiles on the same episode and soundtrack. All profiles keep cue times in seconds and produce a fast-start MP4. Notebook labels, handwriting and callouts draw at the output resolution. For a resolution-independent custom layer, use `page.layer(at, duration, draw, native=True)` and draw with Canvas primitives. The callback runs on demand when the render width changes, so capture loop values when defining it. Existing custom layers keep their 720p snapshot behavior. Raw Pillow coordinates inside native callbacks are in output pixels. A custom `Notebook.frame(time, width)` implementation owns its rasterization and must return an RGB image of the requested size.
 
 ## Create a timed notebook
 

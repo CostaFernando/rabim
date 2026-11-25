@@ -5,12 +5,29 @@ import runpy
 import subprocess
 import tempfile
 import wave
+from dataclasses import dataclass
 from pathlib import Path
 
 from PIL import Image
 
 from . import Canvas, Scene
 from .notebook import Notebook
+
+
+@dataclass(frozen=True)
+class RenderProfile:
+    width: int
+    fps: int
+    preset: str
+    crf: int
+    suffix: str
+
+
+PROFILES = {
+    "draft": RenderProfile(640, 12, "veryfast", 23, "-preview.mp4"),
+    "standard": RenderProfile(1280, 24, "fast", 17, ".mp4"),
+    "production": RenderProfile(1920, 24, "fast", 15, "-1080p.mp4"),
+}
 
 
 def narration(scene, folder, voice):
@@ -104,7 +121,10 @@ def frame(scene, starts, time, width):
 def main():
     parser = argparse.ArgumentParser(description="Render a Rabim Python episode")
     parser.add_argument("episode", type=Path)
-    parser.add_argument("--preview", action="store_true", help="640 × 360, 12 fps")
+    quality = parser.add_mutually_exclusive_group()
+    quality.add_argument("--quality", choices=PROFILES, default="standard")
+    quality.add_argument("--preview", dest="quality", action="store_const", const="draft",
+                         help="alias for --quality draft")
     parser.add_argument("--voice", default="Samantha")
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--audio", type=Path, help="Optional finished soundtrack for a timed notebook")
@@ -114,9 +134,9 @@ def main():
         parser.error("episode must export a Rabim Scene named scene")
     if args.audio and not isinstance(scene, Notebook):
         parser.error("--audio needs a timed notebook episode")
-    width, fps = (640, 12) if args.preview else (1280, 24)
-    suffix = "-preview.mp4" if args.preview else ".mp4"
-    output = args.output or Path("renders") / (args.episode.stem + suffix)
+    profile = PROFILES[args.quality]
+    width, fps = profile.width, profile.fps
+    output = args.output or Path("renders") / (args.episode.stem + profile.suffix)
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=output.parent) as tmp:
         folder = Path(tmp)
@@ -145,9 +165,9 @@ def main():
             "-c:v",
             "libx264",
             "-preset",
-            "fast",
+            profile.preset,
             "-crf",
-            "17",
+            str(profile.crf),
             "-pix_fmt",
             "yuv420p",
             "-c:a",
@@ -159,7 +179,10 @@ def main():
         with subprocess.Popen(command, stdin=subprocess.PIPE) as encoder:
             for i in range(math.ceil(seconds * fps)):
                 if isinstance(scene, Notebook):
-                    encoder.stdin.write(scene.frame(i / fps, width).tobytes())
+                    img = scene.frame(i / fps, width)
+                    if img.size != (width, width * 9 // 16) or img.mode != "RGB":
+                        raise ValueError(f"Notebook.frame must return an RGB image at {width} × {width * 9 // 16}")
+                    encoder.stdin.write(img.tobytes())
                     continue
                 img = frame(scene, starts, i / fps, width * 2)
                 encoder.stdin.write(
