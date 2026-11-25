@@ -18,10 +18,12 @@ class Notebook:
             raise ValueError("Page starts must increase and fall within the runtime")
         page = Page(self.theme)
         self.pages.append((at, page))
-        page.label(0, (60, 30), self.masthead, 23, "curve", mono=True, duration=0)
-        page.label(0, (930, 30), self.edition, 20, "muted", mono=True, duration=0)
-        page.layer(0, 0, lambda c: c.path([(60, 76), (630, 75), (1220, 77)], color=self.theme.muted, width=2))
-        page.label(0, (64, 106), title, 64)
+        has_header = bool(self.masthead or self.edition)
+        if has_header:
+            page.label(0, (60, 30), self.masthead, 23, "curve", mono=True, duration=0)
+            page.label(0, (930, 30), self.edition, 20, "muted", mono=True, duration=0)
+            page.layer(0, 0, lambda c: c.path([(60, 76), (630, 75), (1220, 77)], color=self.theme.muted, width=2))
+        page.label(0, (64, 106 if has_header else 65), title, 64)
         return page
 
     def frame(self, time, width):
