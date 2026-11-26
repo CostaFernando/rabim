@@ -77,3 +77,13 @@ Canvas coordinates use a 1280 × 720 page with the origin at the top left. The t
 - `arrow(start, end, progress=p)`, `highlight(start, end, progress=p)` and `dot(xy, radius=8)` share the scene palette.
 
 Set scene-wide defaults with `Scene(..., theme=Theme(accent="#913c25"), seed=9)`. The seed holds stroke variation steady across frames. Watch a preview through each cue before making the full render.
+
+## Timed diagrams and chapter renders
+
+Use `NarrationCues(alignment)` with recorded character timestamps. Resolve required cues at setup with `cues.at("look lower")`. Select a repeated phrase with `occurrence=2`. In a frame callback, `cues.progress(time, "look lower", duration=1.2)` returns a smooth reveal at the recorded onset.
+
+`Grid(x, y, width, height, rows, columns)` uses zero-based row and column addresses. Paint a cell-sized RGB image with `grid.paint(canvas, image)`, draw a selection with `grid.highlight(canvas, row, col, color=ink)`, or use `grid.center(row, col)` to attach a connector. Bounds and centers use logical canvas coordinates.
+
+Use `ValueBars(left=400, width=240, low=-2, high=4)` as a shared scale. Call `bars.bar(canvas, y, value, height=14, color=ink)` for each labeled row. All bars grow from the same zero baseline.
+
+Notebook pages can be rendered independently. For a custom frame implementation, supply `chapters=[(0, "Opening"), (12.4, "Calculation")]` to the Notebook constructor. Select one chapter with `--chapter 2` or a consecutive range with `--chapter 2:4`. Frame times stay on the full episode clock. An optional full-length soundtrack is trimmed to the same interval.

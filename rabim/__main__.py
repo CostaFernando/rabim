@@ -128,6 +128,7 @@ def main():
     parser.add_argument("--voice", default="Samantha")
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--audio", type=Path, help="Optional finished soundtrack for a timed notebook")
+    parser.add_argument("--chapter", help="One notebook chapter or an inclusive range, e.g. 2:4 (one-based)")
     args = parser.parse_args()
     scene = runpy.run_path(str(args.episode))["scene"]
     if not isinstance(scene, (Notebook, Scene)):
@@ -137,6 +138,24 @@ def main():
     profile = PROFILES[args.quality]
     width, fps = profile.width, profile.fps
     output = args.output or Path("renders") / (args.episode.stem + profile.suffix)
+    first_frame = 0
+    if args.chapter:
+        chapters = getattr(scene, "chapters", ())
+        if not chapters and isinstance(scene, Notebook):
+            chapters = scene.pages
+        try:
+            bounds = [int(part) for part in args.chapter.split(":")]
+        except ValueError:
+            parser.error("Use --chapter N or FIRST:LAST")
+        if len(bounds) not in (1, 2) or not 1 <= bounds[0] <= bounds[-1] <= len(chapters):
+            parser.error("Chapter range outside the notebook")
+        first_frame = math.ceil(chapters[bounds[0]-1][0]*fps)
+        end_time = scene.duration if bounds[-1] == len(chapters) else chapters[bounds[-1]][0]
+        end_frame = math.ceil(end_time*fps)
+        if end_frame <= first_frame:
+            parser.error("Chapter range contains no frames at this profile")
+        if not args.output:
+            output = output.with_name(output.stem + "-chapter-" + "-".join(map(str,bounds)) + output.suffix)
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=output.parent) as tmp:
         folder = Path(tmp)
@@ -159,7 +178,9 @@ def main():
             str(fps),
             "-i",
             "-",
+            *(["-ss", str(first_frame/fps)] if audio and first_frame else []),
             *(["-i", str(audio)] if audio else []),
+            *(["-map_chapters", "-1"] if args.chapter else []),
             "-map", "0:v:0",
             *(["-map", "1:a:0", "-af", "apad", "-shortest"] if audio else []),
             "-c:v",
@@ -177,7 +198,7 @@ def main():
             str(video),
         ]
         with subprocess.Popen(command, stdin=subprocess.PIPE) as encoder:
-            for i in range(math.ceil(seconds * fps)):
+            for i in range(first_frame, end_frame if args.chapter else math.ceil(seconds * fps)):
                 if isinstance(scene, Notebook):
                     img = scene.frame(i / fps, width)
                     if img.size != (width, width * 9 // 16) or img.mode != "RGB":

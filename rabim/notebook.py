@@ -8,11 +8,17 @@ from .drawing import Canvas, Theme
 
 
 class Notebook:
-    def __init__(self, *, duration, masthead="", edition="", theme=None):
+    def __init__(self, *, duration, masthead="", edition="", theme=None, chapters=()):
         self.theme = theme or Theme.notebook()
         self.duration = duration
         self.masthead = masthead
         self.edition = edition
+        self.chapters = tuple(chapters)
+        last = -1
+        for start, title in self.chapters:
+            if not last < start < duration or start < 0:
+                raise ValueError("Chapter starts must increase and fall within the runtime")
+            last = start
         self.pages = []
 
     def page(self, at, title):
