@@ -26,6 +26,23 @@ class TimedDiagrams(unittest.TestCase):
             with self.assertRaises(IndexError):
                 g.center(-1,0)
 
+    def test_rectangle_matches_polygon_brush_at_each_scale(self):
+        for width in (640, 1920):
+            for progress in (0, .45, 1):
+                image = Image.new("RGB", (width, width * 9 // 16), "white")
+                expected = image.copy()
+                theme = Theme.notebook()
+                canvas = Canvas(image, theme, 1)
+                canvas.fill_rect(23, 14, 102, 31, progress=progress, color="red")
+                Canvas(expected, theme, 1).brush_fill(
+                    [(23, 14), (125, 14), (125, 45), (23, 45)],
+                    progress=progress, color="red")
+                canvas.fill_rect(15, 10, 0, 20, color="blue")
+                canvas.fill_rect(15, 10, 20, 0, color="blue")
+                self.assertEqual(image.tobytes(), expected.tobytes())
+                with self.assertRaises(ValueError):
+                    canvas.fill_rect(15, 10, -1, 20)
+
     def test_signed_bars_share_zero(self):
         im = Image.new("RGB",(1280,720),"white")
         canvas = Canvas(im,Theme.notebook(),0)

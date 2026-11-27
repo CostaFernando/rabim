@@ -174,6 +174,16 @@ class Canvas:
         pos = (round(xy[0]*self.scale+left), round(xy[1]*self.scale+top))
         self.draw.bitmap(pos, ImageChops.multiply(alpha, coverage), fill=color or self.theme.ink)
 
+    def fill_rect(self, x, y, width, height, *, color=None, progress=1):
+        """Brush a rectangle from its top-left corner in logical canvas units."""
+        if width < 0 or height < 0:
+            raise ValueError("Rectangle dimensions must be nonnegative")
+        if width == 0 or height == 0 or progress <= 0:
+            return
+        right, bottom = x + width, y + height
+        self.brush_fill([(x, y), (right, y), (right, bottom), (x, bottom)],
+                        color=color, progress=progress)
+
     def brush_fill(self, points, *, progress=1, color=None):
         """Lay successive diagonal strokes inside the painted silhouette."""
         polygon = [(x*self.scale, y*self.scale) for x,y in points]

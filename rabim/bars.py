@@ -19,12 +19,11 @@ class ValueBars:
     def bar(self, canvas, y, value, *, height, color, track=None):
         if not isfinite(value) or not self.low <= value <= self.high or height <= 0:
             raise ValueError("Bar value outside domain or invalid height")
-        def fill(left, right, shade):
-            top, bottom = y-height/2, y+height/2
-            canvas.brush_fill([(left,top),(right,top),(right,bottom),(left,bottom)],color=shade)
+        top = y - height / 2
         if track is not None:
-            fill(self.left,self.left+self.width,track)
+            canvas.fill_rect(self.left, top, self.width, height, color=track)
         if value:
-            scale = self.width/(self.high-self.low)
-            zero = self.left-self.low*scale
-            fill(zero+min(0,value)*scale,zero+max(0,value)*scale,color)
+            scale = self.width / (self.high - self.low)
+            zero = self.left - self.low * scale
+            canvas.fill_rect(zero + min(0, value) * scale, top,
+                             abs(value) * scale, height, color=color)
